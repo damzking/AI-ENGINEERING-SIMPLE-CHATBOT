@@ -1,0 +1,160 @@
+{
+  "name": "PDF Chat - Gemini AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pdf-chat",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8f3f4257-2020-4c77-82e5-9eec70aa6301",
+      "name": "Chat Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Question: {{ $json.body.question }}\n\nRetrieved PDF excerpts:\n{{ $json.body.context }}",
+        "options": {
+          "systemMessage": "Answer the user's question using only the supplied PDF excerpts. If the excerpts do not contain the answer, say you could not find it in the PDF. Do not use outside knowledge. If arithmetic is needed to answer a question based on the excerpts, use the Calculator tool. Be concise and do not invent facts or citations."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        260,
+        0
+      ],
+      "id": "a3d2b869-52e4-448a-a3d8-9f6340a3ab91",
+      "name": "PDF Question AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        220,
+        240
+      ],
+      "id": "1e3b4f91-ec1d-4cb7-90c2-1f64d7b30e52",
+      "name": "Gemini Chat Model"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        420,
+        240
+      ],
+      "id": "bb98df0a-1c72-44d3-9a10-9a6425ecda72",
+      "name": "Calculator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nconst answer = result.output;\nconst request = $('Chat Webhook').first().json.body;\n\nif (typeof answer !== 'string' || answer.trim() === '') {\n  throw new Error('The Gemini AI Agent returned an empty answer. Check the Agent and Gemini model configuration.');\n}\nif (!Array.isArray(request.sources)) {\n  throw new Error('The webhook request did not include a valid sources array.');\n}\n\nreturn [{\n  json: {\n    answer: answer.trim(),\n    sources: request.sources,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "id": "197cfd4f-a9ad-4a72-b072-109d3f3efc38",
+      "name": "Format Answer"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        780,
+        0
+      ],
+      "id": "1ee5e960-d5b4-44bd-a911-68fbc131fb2f",
+      "name": "Return Answer"
+    }
+  ],
+  "connections": {
+    "Chat Webhook": {
+      "main": [
+        [
+          {
+            "node": "PDF Question AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF Question AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "PDF Question AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator": {
+      "ai_tool": [
+        [
+          {
+            "node": "PDF Question AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Answer": {
+      "main": [
+        [
+          {
+            "node": "Return Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f6c6cd8a-786d-4767-b1bb-d2d48d2f7a75",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
