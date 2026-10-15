@@ -11,7 +11,7 @@ PYPDF.ipynb
 
 ## n8n Cloud + Streamlit
 
-The Streamlit app reads the PDF and retrieves relevant text locally. It sends the question and retrieved excerpts to an n8n Cloud webhook. An n8n AI Agent uses the **Google Gemini Chat Model** (default: Gemini 2.5 Flash) and Calculator tool, then returns the answer and page sources. The Gemini model runs through n8n **Gateway credits**, so no Hugging Face or Google API credential is needed.
+The Streamlit app reads the PDF and retrieves relevant text locally. It sends the question and retrieved excerpts to an n8n Cloud webhook. An n8n AI Agent uses the **Google Gemini Chat Model** (default: Gemini 2.5 Flash) and Calculator tool, then returns the answer and page sources. The Gemini model runs through n8n **Gateway credits**, so no Hugging Face or Google API credential is needed. Locally, webhook settings come from `.env`; on Streamlit Community Cloud, they come from the app's protected Secrets settings. Local `.env` values take precedence.
 
 ### Set up the n8n workflow
 
@@ -37,9 +37,16 @@ The app builds an in-memory Chroma index with `sentence-transformers/all-MiniLM-
 
 ### Deploy on Streamlit Community Cloud
 
-1. Push the project to a GitHub repository.
-2. In Streamlit Community Cloud, create an app from that repository and set the main file to `app.py`.
-3. This version reads configuration only from a local `.env` file, and `.env` is excluded from Git. Streamlit Community Cloud does not provide that local file automatically, so this version is not ready to run there. Cloud deployment requires changing the app to read Streamlit Secrets or choosing a host that can mount a secret `.env` file. Never commit the real `.env` file or its token.
+1. Push the project to GitHub. The deployment branch for this version is `deploy/pdf-chat`.
+2. In Streamlit Community Cloud, create an app from `damzking/AI-ENGINEERING-SIMPLE-CHATBOT`, select branch `deploy/pdf-chat`, and set the main file to `app.py`.
+3. In **Advanced settings → Secrets**, add the n8n production URL and the Header Auth secret. Do not include `Bearer ` in the token value:
+
+   ```toml
+   N8N_WEBHOOK_URL = "https://emmanuel201.app.n8n.cloud/webhook/pdf-chat"
+   N8N_WEBHOOK_TOKEN = "your-webhook-secret-without-Bearer-prefix"
+   ```
+
+4. Save and deploy. Keep the real `.env` file out of Git; `.gitignore` excludes it. For local runs, use `.env` as described above.
 
 ## Project Goal
 

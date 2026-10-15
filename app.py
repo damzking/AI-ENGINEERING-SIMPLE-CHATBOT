@@ -10,12 +10,21 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import dotenv_values
 from pypdf import PdfReader
+from streamlit.errors import StreamlitSecretNotFoundError
 
 ENV_SETTINGS = dotenv_values(Path(__file__).with_name(".env"))
 
 
 def get_setting(name: str) -> str:
-    return str(ENV_SETTINGS.get(name) or "").strip()
+    local_value = ENV_SETTINGS.get(name)
+    if local_value:
+        return str(local_value).strip()
+
+    try:
+        cloud_value = st.secrets.get(name, "")
+    except StreamlitSecretNotFoundError:
+        cloud_value = ""
+    return str(cloud_value or "").strip()
 
 
 def pdf_to_chunks(pdf_bytes: bytes, filename: str) -> list[Document]:
@@ -119,7 +128,7 @@ webhook_token = get_setting("N8N_WEBHOOK_TOKEN")
 if not webhook_url or not webhook_token:
     st.info(
         "Set N8N_WEBHOOK_URL and N8N_WEBHOOK_TOKEN in the project's .env file "
-        "before asking questions."
+        "for local runs, or in Streamlit Cloud Secrets for a deployed app."
     )
 
 if "index_id" not in st.session_state:
